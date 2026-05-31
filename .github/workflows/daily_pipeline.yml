@@ -1,0 +1,37 @@
+name: Daily Pipeline
+
+on:
+  schedule:
+    # 18:05 ET = 23:05 UTC (ajustar a 22:05 UTC en horario de verano)
+    - cron: "5 23 * * 1-5"   # lunes a viernes
+  workflow_dispatch:           # permite lanzarlo manualmente desde GitHub
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+
+    env:
+      MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+      MYSQL_PORT: ${{ secrets.MYSQL_PORT }}
+      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+      MYSQL_SSL: "true"
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily pipeline
+        run: python -m app.scheduler.jobs --run-now
