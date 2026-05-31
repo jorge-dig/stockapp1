@@ -36,8 +36,15 @@ init_db()
 
 
 # --- Helpers ---
+from contextlib import contextmanager
+
+@contextmanager
 def get_session():
-    return SessionLocal()
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 @st.cache_data(ttl=300)
@@ -71,8 +78,7 @@ def get_ohlcv(ticker_id: int, days: int = 365) -> pd.DataFrame:
 @st.cache_data(ttl=60)
 def get_indicators_pivot(ticker_id: int, days: int = 365) -> pd.DataFrame:
     since = date.today() - timedelta(days=days)
-    session = get_session()
-    try:
+    with get_session() as session:
         rows = (
             session.query(Indicator)
             .filter(Indicator.ticker_id == ticker_id, Indicator.date >= since)
@@ -83,8 +89,6 @@ def get_indicators_pivot(ticker_id: int, days: int = 365) -> pd.DataFrame:
             return pd.DataFrame()
         data = [{"date": r.date, "indicator_name": r.indicator_name, "value": float(r.value) if r.value is not None else None}
                 for r in rows]
-    finally:
-        session.close()
 
     df = pd.DataFrame(data)
     pivot = df.pivot_table(index="date", columns="indicator_name", values="value", aggfunc="first")
