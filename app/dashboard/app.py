@@ -781,27 +781,43 @@ elif page == "🔬 Backtest":
                         line=dict(color=color, width=1), connectgaps=False,
                     ), row=1, col=1)
 
-            # BUY markers
+            # BUY markers — green upward triangle with white border, label above marker
             if res.buy_signals:
                 buy_dates  = pd.to_datetime(res.buy_signals)
                 buy_df     = res.df[pd.to_datetime(res.df["date"]).isin(buy_dates)]
                 fig.add_trace(go.Scatter(
                     x=pd.to_datetime(buy_df["date"]),
-                    y=buy_df["low"] * 0.99,
-                    mode="markers",
-                    marker=dict(symbol="triangle-up", size=10, color="#26a69a"),
+                    y=buy_df["low"] * 0.97,
+                    mode="markers+text",
+                    marker=dict(
+                        symbol="triangle-up",
+                        size=16,
+                        color="#00e676",
+                        line=dict(color="white", width=1.5),
+                    ),
+                    text=["B"] * len(buy_df),
+                    textposition="bottom center",
+                    textfont=dict(color="#00e676", size=9),
                     name="BUY",
                 ), row=1, col=1)
 
-            # SELL markers
+            # SELL markers — red downward triangle with white border, label below marker
             if res.sell_signals:
                 sell_dates = pd.to_datetime(res.sell_signals)
                 sell_df    = res.df[pd.to_datetime(res.df["date"]).isin(sell_dates)]
                 fig.add_trace(go.Scatter(
                     x=pd.to_datetime(sell_df["date"]),
-                    y=sell_df["high"] * 1.01,
-                    mode="markers",
-                    marker=dict(symbol="triangle-down", size=10, color="#ef5350"),
+                    y=sell_df["high"] * 1.03,
+                    mode="markers+text",
+                    marker=dict(
+                        symbol="triangle-down",
+                        size=16,
+                        color="#ff1744",
+                        line=dict(color="white", width=1.5),
+                    ),
+                    text=["S"] * len(sell_df),
+                    textposition="top center",
+                    textfont=dict(color="#ff1744", size=9),
                     name="SELL",
                 ), row=1, col=1)
 
