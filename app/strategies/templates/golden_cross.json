@@ -1,0 +1,13 @@
+{
+  "name": "Golden Cross",
+  "description": "SMA50 crosses above SMA200 (confirmed 2 candles)",
+  "rules_json": {
+    "conditions": [
+      {"indicator": "sma_50", "op": "cross_above", "indicator2": "sma_200"},
+      {"indicator": "close", "op": ">", "indicator2": "sma_50"},
+      {"indicator": "adx", "op": ">", "value": 20}
+    ],
+    "logic": "AND",
+    "signal": "BUY"
+  }
+}

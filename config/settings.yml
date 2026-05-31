@@ -1,0 +1,32 @@
+app:
+  name: StockApp
+  version: "1.0.0"
+
+data:
+  history_start: "2020-01-01"
+  batch_delay_seconds: 0.5    # delay between tickers to avoid rate limits
+  max_retries: 3
+
+indicators:
+  sma_periods: [20, 50, 200]
+  ema_periods: [9, 20, 50, 200]
+  rsi_periods: [14]
+  atr_length: 14
+  bollinger_length: 20
+  bollinger_std: 2.0
+  stoch_k: 14
+  stoch_d: 3
+  adx_length: 14
+  custom:
+    high_low_lookbacks: [20, 52]
+    multi_candle_n: [2, 3]
+    pullback_tolerance_pct: 0.5
+
+scheduler:
+  timezone: "America/New_York"
+  daily_hour: 18
+  daily_minute: 5
+
+reports:
+  output_dir: "reports"
+  top_movers_count: 5

@@ -1,0 +1,11 @@
+{
+  "name": "RSI Extremes",
+  "description": "RSI oversold (<30) or overbought (>70) alert",
+  "rules_json": {
+    "conditions": [
+      {"indicator": "rsi_14", "op": "<", "value": 30}
+    ],
+    "logic": "AND",
+    "signal": "BUY"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "52-Week Breakout",
+  "description": "Price breaks above 52-week high with volume confirmation",
+  "rules_json": {
+    "conditions": [
+      {"indicator": "break_high_52", "op": "==", "value": 1},
+      {"indicator": "adx", "op": ">", "value": 25},
+      {"indicator": "trend_direction", "op": ">", "value": 0}
+    ],
+    "logic": "AND",
+    "signal": "BUY"
+  }
+}

@@ -1,0 +1,35 @@
+# Default tickers loaded on first run (via setup.py)
+# Format: symbol, asset_type, name (optional), exchange (optional)
+
+stocks:
+  - {symbol: AAPL, name: "Apple Inc.", exchange: NASDAQ}
+  - {symbol: MSFT, name: "Microsoft Corp.", exchange: NASDAQ}
+  - {symbol: GOOGL, name: "Alphabet Inc.", exchange: NASDAQ}
+  - {symbol: AMZN, name: "Amazon.com Inc.", exchange: NASDAQ}
+  - {symbol: NVDA, name: "NVIDIA Corp.", exchange: NASDAQ}
+  - {symbol: META, name: "Meta Platforms", exchange: NASDAQ}
+  - {symbol: TSLA, name: "Tesla Inc.", exchange: NASDAQ}
+  - {symbol: JPM, name: "JPMorgan Chase", exchange: NYSE}
+  - {symbol: BAC, name: "Bank of America", exchange: NYSE}
+  - {symbol: XOM, name: "Exxon Mobil", exchange: NYSE}
+
+indices:
+  - {symbol: SPY, name: "S&P 500 ETF", exchange: NYSE}
+  - {symbol: QQQ, name: "Nasdaq-100 ETF", exchange: NASDAQ}
+  - {symbol: DIA, name: "Dow Jones ETF", exchange: NYSE}
+  - {symbol: IWM, name: "Russell 2000 ETF", exchange: NYSE}
+  - {symbol: VIX, name: "CBOE Volatility Index"}
+
+crypto:
+  - {symbol: BTC, name: "Bitcoin"}
+  - {symbol: ETH, name: "Ethereum"}
+  - {symbol: BNB, name: "Binance Coin"}
+  - {symbol: SOL, name: "Solana"}
+  - {symbol: XRP, name: "XRP"}
+
+forex:
+  - {symbol: "EURUSD=X", name: "EUR/USD"}
+  - {symbol: "GBPUSD=X", name: "GBP/USD"}
+  - {symbol: "USDJPY=X", name: "USD/JPY"}
+  - {symbol: "USDCHF=X", name: "USD/CHF"}
+  - {symbol: "AUDUSD=X", name: "AUD/USD"}
