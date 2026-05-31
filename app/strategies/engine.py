@@ -109,18 +109,21 @@ def build_row_dict(date_val: date, ohlcv_row: dict, indicator_rows: list[dict]) 
     return row
 
 
-def run_strategy(strategy: Strategy, ticker: Ticker, session) -> list[Signal]:
-    """Runs one strategy on all active dates for one ticker. Returns new Signal objects."""
+def run_strategy(strategy: Strategy, ticker: Ticker, session, since: date = None) -> list[Signal]:
+    """Runs one strategy on dates >= since for one ticker. Returns new Signal objects."""
+    from datetime import timedelta
     rules = strategy.rules_json
     signal_type = rules.get("signal", "ALERT")
 
-    # Load OHLCV as dataframe
+    # Need enough lookback for cross detection even when `since` is recent.
+    # Load full OHLCV but only emit signals for dates >= since.
     df = load_ohlcv(session, ticker.id)
     if df.empty:
         return []
 
     # Load all indicators into a pivot dict: {date: {indicator: value}}
-    ind_rows = session.query(Indicator).filter_by(ticker_id=ticker.id).all()
+    ind_query = session.query(Indicator).filter_by(ticker_id=ticker.id)
+    ind_rows = ind_query.all()
     ind_by_date: dict[date, dict] = {}
     for r in ind_rows:
         if r.date not in ind_by_date:
@@ -136,6 +139,9 @@ def run_strategy(strategy: Strategy, ticker: Ticker, session) -> list[Signal]:
     signals = []
     dates = sorted(df["date"].tolist())
     for i, d in enumerate(dates):
+        # Skip dates before `since` — but still use them as prev_row for crossover logic
+        if since and d < since:
+            continue
         ohlcv_row = df[df["date"] == d].iloc[0].to_dict()
         ind_row = ind_by_date.get(d, {})
         row = {**ohlcv_row, **ind_row}
@@ -167,7 +173,11 @@ def run_strategy(strategy: Strategy, ticker: Ticker, session) -> list[Signal]:
 
 
 def run_all_strategies(since: date = None):
-    """Evaluates all active strategies on all active tickers."""
+    """Evaluates all active strategies on all active tickers since a given date."""
+    from datetime import timedelta
+    if since is None:
+        since = date.today() - timedelta(days=3)
+
     session = SessionLocal()
     try:
         strategies = session.query(Strategy).filter_by(active=1).all()
@@ -176,7 +186,7 @@ def run_all_strategies(since: date = None):
 
         for strategy in strategies:
             for ticker in tickers:
-                new_signals = run_strategy(strategy, ticker, session)
+                new_signals = run_strategy(strategy, ticker, session, since=since)
                 if new_signals:
                     session.add_all(new_signals)
                     session.commit()
