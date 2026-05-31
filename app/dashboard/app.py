@@ -224,17 +224,17 @@ elif page == "📋 Tickers":
                 with c5:
                     if row['active']:
                         if st.button("Deactivate", key=f"deact_{row['id']}", use_container_width=True):
-                            session = get_session()
-                            t = session.query(Ticker).filter_by(id=row['id']).first()
-                            t.active = 0
-                            session.commit(); session.close()
+                            with get_session() as session:
+                                t = session.query(Ticker).filter_by(id=row['id']).first()
+                                t.active = 0
+                                session.commit()
                             st.cache_data.clear(); st.rerun()
                     else:
                         if st.button("Activate", key=f"act_{row['id']}", use_container_width=True):
-                            session = get_session()
-                            t = session.query(Ticker).filter_by(id=row['id']).first()
-                            t.active = 1
-                            session.commit(); session.close()
+                            with get_session() as session:
+                                t = session.query(Ticker).filter_by(id=row['id']).first()
+                                t.active = 1
+                                session.commit()
                             st.cache_data.clear(); st.rerun()
 
                 with c6:
@@ -474,11 +474,8 @@ elif page == "📊 Charts":
         st.stop()
 
     # Info strip
-    session = get_session()
-    try:
+    with get_session() as session:
         ind_dates = session.query(Indicator).filter_by(ticker_id=ticker_id).count()
-    finally:
-        session.close()
 
     if ind_dates == 0:
         st.info("ℹ️ No indicators calculated yet. Use **📊 Recalculate Indicators** above.")
@@ -678,13 +675,10 @@ elif page == "🔬 Backtest":
     from app.backtest.engine import run_backtest, YEARS
 
     tickers_df  = get_tickers_df()
-    session     = get_session()
-    try:
-        from app.db.models import Strategy as StrategyModel
+    from app.db.models import Strategy as StrategyModel
+    with get_session() as session:
         strategies_db = session.query(StrategyModel).filter_by(active=1).order_by(StrategyModel.name).all()
         strat_options  = {s.name: s for s in strategies_db}
-    finally:
-        session.close()
 
     if tickers_df.empty:
         st.warning("No tickers configured."); st.stop()
