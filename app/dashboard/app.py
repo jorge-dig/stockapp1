@@ -59,8 +59,10 @@ def get_tickers_df():
 
 
 @st.cache_data(ttl=60)
-def get_ohlcv(ticker_id: int, days: int = 365) -> pd.DataFrame:
-    since = date.today() - timedelta(days=days)
+def get_ohlcv(ticker_id: int, days: int = 365, _today: date = None) -> pd.DataFrame:
+    if _today is None:
+        _today = date.today()
+    since = _today - timedelta(days=days)
     with get_session() as session:
         rows = (
             session.query(OHLCV)
@@ -76,8 +78,10 @@ def get_ohlcv(ticker_id: int, days: int = 365) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=60)
-def get_indicators_pivot(ticker_id: int, days: int = 365) -> pd.DataFrame:
-    since = date.today() - timedelta(days=days)
+def get_indicators_pivot(ticker_id: int, days: int = 365, _today: date = None) -> pd.DataFrame:
+    if _today is None:
+        _today = date.today()
+    since = _today - timedelta(days=days)
     with get_session() as session:
         rows = (
             session.query(Indicator)
@@ -466,11 +470,11 @@ elif page == "📊 Charts":
             st.rerun()
 
     # ── Load data ─────────────────────────────────────────────────────────────
-    df     = get_ohlcv(ticker_id, days)
+    df     = get_ohlcv(ticker_id, days, _today=date.today())
     # Load indicators with extra warmup days so SMA200/EMA200 are populated
     # across the full visible range (200-day indicators need 200 days to warm up)
     IND_WARMUP = 250
-    ind_df = get_indicators_pivot(ticker_id, days + IND_WARMUP)
+    ind_df = get_indicators_pivot(ticker_id, days + IND_WARMUP, _today=date.today())
 
     if df.empty:
         st.warning(f"No OHLCV data for {symbol}. Use 'Update price data' above.")
