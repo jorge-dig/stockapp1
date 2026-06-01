@@ -132,6 +132,35 @@ def candle_patterns(df: pd.DataFrame) -> dict[str, pd.Series]:
     }
 
 
+def pivot_high_low(df: pd.DataFrame, n: int = 2) -> dict[str, pd.Series]:
+    """
+    Pivot highs and lows using n-bar lookback and lookahead.
+    Pivot high: daily high > high of n previous AND n subsequent bars.
+    Pivot low:  daily low  < low  of n previous AND n subsequent bars.
+    Returns the high/low value at confirmed pivots, NaN elsewhere.
+    The last n bars are always NaN (future candles not yet available).
+    """
+    high = df["high"]
+    low = df["low"]
+
+    is_pivot_high = pd.Series(True, index=df.index)
+    is_pivot_low = pd.Series(True, index=df.index)
+
+    for k in range(1, n + 1):
+        is_pivot_high &= (high > high.shift(k)) & (high > high.shift(-k))
+        is_pivot_low &= (low < low.shift(k)) & (low < low.shift(-k))
+
+    pivot_high = pd.Series(np.nan, index=df.index)
+    pivot_low = pd.Series(np.nan, index=df.index)
+    pivot_high[is_pivot_high] = high[is_pivot_high]
+    pivot_low[is_pivot_low] = low[is_pivot_low]
+
+    return {
+        f"pivot_high_{n}": pivot_high,
+        f"pivot_low_{n}": pivot_low,
+    }
+
+
 def calc_all_custom(df: pd.DataFrame) -> dict[str, pd.Series]:
     """Calculate all custom indicators on a OHLCV + standard indicator DataFrame."""
     if df.empty or len(df) < 30:
@@ -140,6 +169,7 @@ def calc_all_custom(df: pd.DataFrame) -> dict[str, pd.Series]:
     results = {}
     results.update(high_low_break(df, lookback=20))
     results.update(high_low_break(df, lookback=52))  # yearly high/low
+    results.update(pivot_high_low(df, n=2))
 
     # Multi-candle crossovers for key pairs
     for col1, col2 in [("ema_9", "ema_20"), ("ema_20", "ema_50"), ("ema_50", "ema_200"), ("close", "sma_200")]:

@@ -108,9 +108,10 @@ PRICE_OVERLAYS = {"sma_20", "sma_50", "sma_200", "ema_9", "ema_20", "ema_50", "e
 OSCILLATORS    = {"rsi_14", "stoch_k", "stoch_d", "adx", "adx_dmp", "adx_dmn",
                   "bb_percent", "trend_strength", "trend_direction"}
 VOLUME_PANEL   = {"obv"}
+PIVOT_INDICATORS = {"pivot_high_2", "pivot_low_2"}
 # ATR, bb_bandwidth, macd_* get their own panel (already handled)
 EXCLUDE_OVERLAY = {"atr_14", "bb_bandwidth", "obv", "volume",
-                   "macd_line", "macd_signal", "macd_histogram"} | OSCILLATORS
+                   "macd_line", "macd_signal", "macd_histogram"} | OSCILLATORS | PIVOT_INDICATORS
 
 
 @st.cache_data(ttl=60)
@@ -512,11 +513,12 @@ elif page == "📊 Charts":
             osc_opts,
             default=[x for x in ["rsi_14"] if x in osc_opts],
         )
-        col_a, col_b, col_c, col_d = st.columns(4)
-        show_bb     = col_a.checkbox("Bollinger Bands", value=show_bb)
-        show_volume = col_b.checkbox("Volume", value=True)
-        show_macd   = col_c.checkbox("MACD", value="macd_line" in avail)
-        show_atr    = col_d.checkbox("ATR", value=False)
+        col_a, col_b, col_c, col_d, col_e = st.columns(5)
+        show_bb      = col_a.checkbox("Bollinger Bands", value=show_bb)
+        show_volume  = col_b.checkbox("Volume", value=True)
+        show_macd    = col_c.checkbox("MACD", value="macd_line" in avail)
+        show_atr     = col_d.checkbox("ATR", value=False)
+        show_pivots  = col_e.checkbox("Pivot Points", value=bool(PIVOT_INDICATORS & avail))
 
     # ── Build subplot layout ──────────────────────────────────────────────────
     subplot_specs = []
@@ -572,6 +574,31 @@ elif page == "📊 Charts":
                 line=dict(color="rgba(150,150,150,0.4)", width=0.6, dash="dot"),
                 showlegend=False, connectgaps=False,
             ), row=1, col=1)
+
+    # Pivot highs / lows (rendered as markers above/below candles)
+    if show_pivots:
+        if "pivot_high_2" in df.columns:
+            ph = df[df["pivot_high_2"].notna()]
+            if not ph.empty:
+                fig.add_trace(go.Scatter(
+                    x=pd.to_datetime(ph["date"]),
+                    y=ph["pivot_high_2"] * 1.002,  # slightly above the high
+                    mode="markers",
+                    name="Pivot High",
+                    marker=dict(symbol="triangle-down", size=10, color="#EF5350"),
+                    hovertemplate="Pivot High: %{y:.2f}<extra></extra>",
+                ), row=1, col=1)
+        if "pivot_low_2" in df.columns:
+            pl = df[df["pivot_low_2"].notna()]
+            if not pl.empty:
+                fig.add_trace(go.Scatter(
+                    x=pd.to_datetime(pl["date"]),
+                    y=pl["pivot_low_2"] * 0.998,  # slightly below the low
+                    mode="markers",
+                    name="Pivot Low",
+                    marker=dict(symbol="triangle-up", size=10, color="#26A69A"),
+                    hovertemplate="Pivot Low: %{y:.2f}<extra></extra>",
+                ), row=1, col=1)
 
     fig.update_yaxes(title_text="Price", row=1, col=1)
 
