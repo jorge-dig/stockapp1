@@ -467,7 +467,10 @@ elif page == "📊 Charts":
 
     # ── Load data ─────────────────────────────────────────────────────────────
     df     = get_ohlcv(ticker_id, days)
-    ind_df = get_indicators_pivot(ticker_id, days)
+    # Load indicators with extra warmup days so SMA200/EMA200 are populated
+    # across the full visible range (200-day indicators need 200 days to warm up)
+    IND_WARMUP = 250
+    ind_df = get_indicators_pivot(ticker_id, days + IND_WARMUP)
 
     if df.empty:
         st.warning(f"No OHLCV data for {symbol}. Use 'Update price data' above.")
