@@ -586,7 +586,7 @@ elif page == "📊 Charts":
                     y=ph["pivot_high_2"] * 1.002,
                     mode="markers",
                     name="Pivot High",
-                    marker=dict(symbol="triangle-down", size=10, color="#EF5350"),
+                    marker=dict(symbol="triangle-down", size=10, color="#FF6D00"),
                     hovertemplate="Pivot High: %{y:.2f}<extra></extra>",
                 ), row=1, col=1)
         if "pivot_low_2" in df.columns:
@@ -597,7 +597,7 @@ elif page == "📊 Charts":
                     y=pl["pivot_low_2"] * 0.998,
                     mode="markers",
                     name="Pivot Low",
-                    marker=dict(symbol="triangle-up", size=10, color="#26A69A"),
+                    marker=dict(symbol="triangle-up", size=10, color="#29B6F6"),
                     hovertemplate="Pivot Low: %{y:.2f}<extra></extra>",
                 ), row=1, col=1)
         # Step lines: last confirmed pivot level (no lookahead — pure support/resistance)
@@ -605,7 +605,7 @@ elif page == "📊 Charts":
             fig.add_trace(go.Scatter(
                 x=dates, y=df["last_pivot_high_2"],
                 mode="lines", name="Last Pivot High",
-                line=dict(color="#EF5350", width=1, dash="dot"),
+                line=dict(color="#FF6D00", width=1, dash="dot"),
                 opacity=0.7, connectgaps=False,
                 hovertemplate="Last Pivot High: %{y:.2f}<extra></extra>",
             ), row=1, col=1)
@@ -613,7 +613,7 @@ elif page == "📊 Charts":
             fig.add_trace(go.Scatter(
                 x=dates, y=df["last_pivot_low_2"],
                 mode="lines", name="Last Pivot Low",
-                line=dict(color="#26A69A", width=1, dash="dot"),
+                line=dict(color="#29B6F6", width=1, dash="dot"),
                 opacity=0.7, connectgaps=False,
                 hovertemplate="Last Pivot Low: %{y:.2f}<extra></extra>",
             ), row=1, col=1)
