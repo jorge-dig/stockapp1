@@ -109,9 +109,10 @@ OSCILLATORS    = {"rsi_14", "stoch_k", "stoch_d", "adx", "adx_dmp", "adx_dmn",
                   "bb_percent", "trend_strength", "trend_direction"}
 VOLUME_PANEL   = {"obv"}
 PIVOT_INDICATORS = {"pivot_high_2", "pivot_low_2"}
+PIVOT_LEVELS     = {"last_pivot_high_2", "last_pivot_low_2"}
 # ATR, bb_bandwidth, macd_* get their own panel (already handled)
 EXCLUDE_OVERLAY = {"atr_14", "bb_bandwidth", "obv", "volume",
-                   "macd_line", "macd_signal", "macd_histogram"} | OSCILLATORS | PIVOT_INDICATORS
+                   "macd_line", "macd_signal", "macd_histogram"} | OSCILLATORS | PIVOT_INDICATORS | PIVOT_LEVELS
 
 
 @st.cache_data(ttl=60)
@@ -575,14 +576,14 @@ elif page == "📊 Charts":
                 showlegend=False, connectgaps=False,
             ), row=1, col=1)
 
-    # Pivot highs / lows (rendered as markers above/below candles)
+    # Pivot highs / lows (markers at confirmed pivots + step lines for current levels)
     if show_pivots:
         if "pivot_high_2" in df.columns:
             ph = df[df["pivot_high_2"].notna()]
             if not ph.empty:
                 fig.add_trace(go.Scatter(
                     x=pd.to_datetime(ph["date"]),
-                    y=ph["pivot_high_2"] * 1.002,  # slightly above the high
+                    y=ph["pivot_high_2"] * 1.002,
                     mode="markers",
                     name="Pivot High",
                     marker=dict(symbol="triangle-down", size=10, color="#EF5350"),
@@ -593,12 +594,29 @@ elif page == "📊 Charts":
             if not pl.empty:
                 fig.add_trace(go.Scatter(
                     x=pd.to_datetime(pl["date"]),
-                    y=pl["pivot_low_2"] * 0.998,  # slightly below the low
+                    y=pl["pivot_low_2"] * 0.998,
                     mode="markers",
                     name="Pivot Low",
                     marker=dict(symbol="triangle-up", size=10, color="#26A69A"),
                     hovertemplate="Pivot Low: %{y:.2f}<extra></extra>",
                 ), row=1, col=1)
+        # Step lines: last confirmed pivot level (no lookahead — pure support/resistance)
+        if "last_pivot_high_2" in df.columns and df["last_pivot_high_2"].notna().any():
+            fig.add_trace(go.Scatter(
+                x=dates, y=df["last_pivot_high_2"],
+                mode="lines", name="Last Pivot High",
+                line=dict(color="#EF5350", width=1, dash="dot"),
+                opacity=0.7, connectgaps=False,
+                hovertemplate="Last Pivot High: %{y:.2f}<extra></extra>",
+            ), row=1, col=1)
+        if "last_pivot_low_2" in df.columns and df["last_pivot_low_2"].notna().any():
+            fig.add_trace(go.Scatter(
+                x=dates, y=df["last_pivot_low_2"],
+                mode="lines", name="Last Pivot Low",
+                line=dict(color="#26A69A", width=1, dash="dot"),
+                opacity=0.7, connectgaps=False,
+                hovertemplate="Last Pivot Low: %{y:.2f}<extra></extra>",
+            ), row=1, col=1)
 
     fig.update_yaxes(title_text="Price", row=1, col=1)
 

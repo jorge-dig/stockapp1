@@ -155,9 +155,15 @@ def pivot_high_low(df: pd.DataFrame, n: int = 2) -> dict[str, pd.Series]:
     pivot_high[is_pivot_high] = high[is_pivot_high]
     pivot_low[is_pivot_low] = low[is_pivot_low]
 
+    # Forward-fill the last confirmed pivot level — no lookahead, pure support/resistance
+    last_pivot_high = pivot_high.ffill()
+    last_pivot_low = pivot_low.ffill()
+
     return {
         f"pivot_high_{n}": pivot_high,
         f"pivot_low_{n}": pivot_low,
+        f"last_pivot_high_{n}": last_pivot_high,
+        f"last_pivot_low_{n}": last_pivot_low,
     }
 
 
