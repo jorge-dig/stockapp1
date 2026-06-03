@@ -718,6 +718,24 @@ elif page == "🔬 Backtest":
     tp_val  = float(take_profit_pct) if take_profit_pct > 0 else None
     days_val = int(exit_after_days)  if exit_after_days > 0 else None
 
+    c_pstype, c_psval = st.columns([2, 2])
+    pos_size_type = c_pstype.selectbox(
+        "Tamaño de posición",
+        options=["pct", "fixed"],
+        format_func=lambda x: "% del capital" if x == "pct" else "$ fijo por operación",
+        help="'% del capital': invierte un porcentaje del capital disponible. '$ fijo': invierte una cantidad fija de dólares.",
+    )
+    if pos_size_type == "pct":
+        pos_size_value = c_psval.number_input(
+            "% a invertir", value=100.0, min_value=1.0, max_value=100.0, step=5.0,
+            help="100% = todo el capital en cada operación. Valores menores dejan parte en cash.",
+        )
+    else:
+        pos_size_value = c_psval.number_input(
+            "$ por operación", value=float(initial_capital), min_value=1.0, max_value=float(initial_capital) * 100,
+            step=500.0, help="Cantidad fija en dólares invertida en cada operación.",
+        )
+
     run_btn = st.button("▶ Run Backtest", type="primary", use_container_width=False)
     if not run_btn:
         st.info("Select a ticker, strategy and timeframes, then press **▶ Run Backtest**.")
@@ -746,6 +764,8 @@ elif page == "🔬 Backtest":
                 stop_loss_pct=sl_val,
                 take_profit_pct=tp_val,
                 exit_after_days=days_val,
+                position_size_type=pos_size_type,
+                position_size_value=float(pos_size_value),
             )
 
     # ── Summary metrics table ─────────────────────────────────────────────────

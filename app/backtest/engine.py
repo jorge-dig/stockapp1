@@ -133,6 +133,7 @@ def generate_signals(df: pd.DataFrame, rules: dict) -> pd.Series:
 class Trade:
     entry_date: date
     entry_price: float
+    position_size: float = 0.0        # dollars actually risked on this trade
     exit_date: date | None = None
     exit_price: float | None = None
     pnl_pct: float = 0.0
@@ -142,11 +143,11 @@ class Trade:
     def closed(self) -> bool:
         return self.exit_date is not None
 
-    def close(self, exit_date: date, exit_price: float, capital: float):
+    def close(self, exit_date: date, exit_price: float):
         self.exit_date  = exit_date
         self.exit_price = exit_price
         self.pnl_pct    = (exit_price - self.entry_price) / self.entry_price * 100
-        self.pnl_abs    = capital * (self.pnl_pct / 100)
+        self.pnl_abs    = self.position_size * (self.pnl_pct / 100)
 
 
 @dataclass
@@ -245,6 +246,8 @@ def run_backtest(
     stop_loss_pct: float | None = None,
     take_profit_pct: float | None = None,
     exit_after_days: int | None = None,
+    position_size_type: str = "pct",   # "pct" | "fixed"
+    position_size_value: float = 100.0, # % of capital OR fixed $ amount
 ) -> BacktestResult:
     """
     Run a full backtest for one ticker × strategy × timeframe.
@@ -321,7 +324,7 @@ def run_backtest(
                 exit_reason = "timeout"
 
             if exit_price is not None:
-                current_trade.close(d, exit_price, capital)
+                current_trade.close(d, exit_price)
                 capital += current_trade.pnl_abs
                 result.trades.append(current_trade)
                 in_trade = False
@@ -329,33 +332,42 @@ def run_backtest(
 
         # ── Entry logic ───────────────────────────────────────────────────────
         if not in_trade:
+            # Calculate position size for this trade
+            if position_size_type == "fixed":
+                pos_amount = min(float(position_size_value), capital)
+            else:  # "pct"
+                pos_amount = capital * (float(position_size_value) / 100.0)
+            pos_amount = max(pos_amount, 0.0)
+
             if sig == 1:
-                current_trade = Trade(entry_date=d, entry_price=close)
+                current_trade = Trade(entry_date=d, entry_price=close, position_size=pos_amount)
                 in_trade  = True
                 entry_bar = i
                 result.buy_signals.append(d)
             elif sig == -1 and sig_type == "SELL":
                 # SELL-only strategy: short trade (inverse logic)
-                current_trade = Trade(entry_date=d, entry_price=close)
+                current_trade = Trade(entry_date=d, entry_price=close, position_size=pos_amount)
                 in_trade  = True
                 entry_bar = i
                 result.sell_signals.append(d)
 
         # ── Mark-to-market equity ─────────────────────────────────────────────
         if in_trade and current_trade:
+            pos = current_trade.position_size
+            cash = capital - pos  # uninvested cash
             if sig_type == "SELL":
                 # Short: profit when price falls
-                mtm = capital * (2 - close / current_trade.entry_price)
+                pos_mtm = pos * (2 - close / current_trade.entry_price)
             else:
-                mtm = capital * (close / current_trade.entry_price)
-            equity.append(max(mtm, 0))
+                pos_mtm = pos * (close / current_trade.entry_price)
+            equity.append(max(cash + pos_mtm, 0))
         else:
             equity.append(capital)
 
     # Close any open trade at last price
     if in_trade and current_trade:
         last_close = df["close"].iloc[-1]
-        current_trade.close(dates_idx[-1], last_close, capital)
+        current_trade.close(dates_idx[-1], last_close)
         capital += current_trade.pnl_abs
         result.trades.append(current_trade)
 
