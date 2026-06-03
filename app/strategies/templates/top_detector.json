@@ -1,0 +1,16 @@
+{
+  "name": "Top Detector",
+  "description": "Detecta techos significativos: sobrecompra extrema (RSI>70, Stoch>82), precio cerca de banda superior Bollinger (BB%>0.90), swing high confirmado, MACD histograma cruzando a la baja (momentum se agota) y ADX>20. Basado en análisis de grandes techos AAPL 2022-2025.",
+  "rules_json": {
+    "conditions": [
+      {"indicator": "rsi_14",          "op": ">",  "value": 70},
+      {"indicator": "stoch_k",         "op": ">",  "value": 85},
+      {"indicator": "bb_percent",      "op": ">",  "value": 0.92},
+      {"indicator": "is_swing_high_2", "op": "==", "value": 1},
+      {"indicator": "adx",             "op": ">",  "value": 25},
+      {"indicator": "adx",             "op": "<",  "value": 60}
+    ],
+    "logic": "AND",
+    "signal": "SELL"
+  }
+}

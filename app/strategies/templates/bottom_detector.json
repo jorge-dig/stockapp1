@@ -1,0 +1,15 @@
+{
+  "name": "Bottom Detector",
+  "description": "Detecta suelos significativos combinando sobreventa extrema (RSI<30, Stoch<20), precio bajo la banda inferior de Bollinger (BB%<0.15), swing low confirmado y MACD con histograma negativo pero en zona de capitalización. Basado en análisis de grandes suelos AAPL 2020-2025.",
+  "rules_json": {
+    "conditions": [
+      {"indicator": "rsi_14",          "op": "<",  "value": 32},
+      {"indicator": "stoch_k",         "op": "<",  "value": 25},
+      {"indicator": "bb_percent",      "op": "<",  "value": 0.15},
+      {"indicator": "is_swing_low_2",  "op": "==", "value": 1},
+      {"indicator": "adx",             "op": ">",  "value": 20}
+    ],
+    "logic": "AND",
+    "signal": "BUY"
+  }
+}
