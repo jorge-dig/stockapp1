@@ -104,7 +104,8 @@ def get_indicators_pivot(ticker_id: int, days: int = 365, _today: date = None) -
 # Indicator categories for chart display
 PRICE_OVERLAYS = {"sma_20", "sma_50", "sma_200", "ema_9", "ema_20", "ema_50", "ema_200",
                   "bb_upper", "bb_mid", "bb_lower", "vwap",
-                  "prev_high_20", "prev_low_20", "prev_high_52", "prev_low_52"}
+                  "prev_high_20", "prev_low_20", "prev_high_52", "prev_low_52",
+                  "swing_high_2", "swing_low_2", "swing_high_3", "swing_low_3"}
 OSCILLATORS    = {"rsi_14", "stoch_k", "stoch_d", "adx", "adx_dmp", "adx_dmn",
                   "bb_percent", "trend_strength", "trend_direction"}
 VOLUME_PANEL   = {"obv"}

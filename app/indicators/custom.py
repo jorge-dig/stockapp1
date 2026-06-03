@@ -134,6 +134,45 @@ def candle_patterns(df: pd.DataFrame) -> dict[str, pd.Series]:
     }
 
 
+def swing_levels(df: pd.DataFrame, n: int = 2) -> dict[str, pd.Series]:
+    """
+    Detects local swing highs and lows and carries their value forward as a step line.
+
+    A swing high at bar i: high[i] > high[i-1] AND high[i] > high[i-2] ... high[i-n]
+    A swing low  at bar i: low[i]  < low[i-1]  AND low[i]  < low[i-2]  ... low[i-n]
+
+    The resulting series holds the most recent swing high/low value at each bar,
+    producing a staircase line that acts as a dynamic support/resistance level.
+    """
+    highs = df["high"]
+    lows  = df["low"]
+
+    # A bar is a swing high if its high is strictly greater than the n bars before it
+    is_swing_high = pd.Series(True, index=df.index)
+    is_swing_low  = pd.Series(True, index=df.index)
+    for lag in range(1, n + 1):
+        is_swing_high &= highs > highs.shift(lag)
+        is_swing_low  &= lows  < lows.shift(lag)
+
+    # Mark NaN for the first n bars (not enough history)
+    is_swing_high.iloc[:n] = False
+    is_swing_low.iloc[:n]  = False
+
+    # Carry the swing value forward: NaN on non-swing bars, then ffill
+    swing_high_val = highs.where(is_swing_high)
+    swing_low_val  = lows.where(is_swing_low)
+
+    prev_swing_high = swing_high_val.ffill()
+    prev_swing_low  = swing_low_val.ffill()
+
+    return {
+        f"swing_high_{n}":      prev_swing_high,
+        f"swing_low_{n}":       prev_swing_low,
+        f"is_swing_high_{n}":   is_swing_high.astype(int),
+        f"is_swing_low_{n}":    is_swing_low.astype(int),
+    }
+
+
 def calc_all_custom(df: pd.DataFrame) -> dict[str, pd.Series]:
     """Calculate all custom indicators on a OHLCV + standard indicator DataFrame."""
     if df.empty or len(df) < 30:
@@ -142,6 +181,8 @@ def calc_all_custom(df: pd.DataFrame) -> dict[str, pd.Series]:
     results = {}
     results.update(high_low_break(df, lookback=20))
     results.update(high_low_break(df, lookback=52))  # yearly high/low
+    results.update(swing_levels(df, n=2))
+    results.update(swing_levels(df, n=3))
 
     # Multi-candle crossovers for key pairs
     for col1, col2 in [("ema_9", "ema_20"), ("ema_20", "ema_50"), ("ema_50", "ema_200"), ("close", "sma_200")]:
