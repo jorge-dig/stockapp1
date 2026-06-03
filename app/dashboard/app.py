@@ -749,24 +749,33 @@ elif page == "🔬 Backtest":
     ticker_id  = int(ticker_row["id"])
     strategy   = strat_options[sel_strategy]
     rules      = strategy.rules_json
+    if isinstance(rules, str):
+        import json as _json
+        rules = _json.loads(rules)
 
     results: dict = {}
     with st.spinner(f"Running backtest for {sel_symbol} / {sel_strategy}…"):
         for tf in sel_tfs:
-            results[tf] = run_backtest(
-                ticker_id=ticker_id,
-                symbol=sel_symbol,
-                strategy_name=sel_strategy,
-                rules=rules,
-                tf=tf,
-                initial_capital=float(initial_capital),
-                years=int(years_back),
-                stop_loss_pct=sl_val,
-                take_profit_pct=tp_val,
-                exit_after_days=days_val,
-                position_size_type=pos_size_type,
-                position_size_value=float(pos_size_value),
-            )
+            try:
+                results[tf] = run_backtest(
+                    ticker_id=ticker_id,
+                    symbol=sel_symbol,
+                    strategy_name=sel_strategy,
+                    rules=rules,
+                    tf=tf,
+                    initial_capital=float(initial_capital),
+                    years=int(years_back),
+                    stop_loss_pct=sl_val,
+                    take_profit_pct=tp_val,
+                    exit_after_days=days_val,
+                    position_size_type=pos_size_type,
+                    position_size_value=float(pos_size_value),
+                )
+            except Exception as _bt_err:
+                st.error(f"Backtest error ({tf}): {_bt_err}")
+                import traceback as _tb
+                st.code(_tb.format_exc())
+                st.stop()
 
     # ── Summary metrics table ─────────────────────────────────────────────────
     st.subheader("Performance Summary")

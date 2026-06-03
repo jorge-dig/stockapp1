@@ -353,16 +353,15 @@ def run_backtest(
 
         # ── Mark-to-market equity ─────────────────────────────────────────────
         if in_trade and current_trade:
-            pos = current_trade.position_size
-            cash = capital - pos  # uninvested cash
+            pos  = current_trade.position_size
+            cash = max(capital - pos, 0.0)   # uninvested cash (never negative)
             if sig_type == "SELL":
-                # Short: profit when price falls
                 pos_mtm = pos * (2 - close / current_trade.entry_price)
             else:
                 pos_mtm = pos * (close / current_trade.entry_price)
             equity.append(max(cash + pos_mtm, 0))
         else:
-            equity.append(capital)
+            equity.append(max(capital, 0))
 
     # Close any open trade at last price
     if in_trade and current_trade:
