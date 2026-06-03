@@ -704,9 +704,19 @@ elif page == "🔬 Backtest":
         help="1D = daily · 1W = weekly · 1M = monthly",
     )
 
-    c_cap, c_years, _ = st.columns([2, 2, 4])
+    c_cap, c_years, c_sl, c_tp, c_days = st.columns([2, 1, 2, 2, 2])
     initial_capital = c_cap.number_input("Initial capital ($)", value=10_000, min_value=100, step=1000)
     years_back      = c_years.number_input("Years back", value=5, min_value=1, max_value=10)
+    stop_loss_pct   = c_sl.number_input("Stop-loss %", value=8.0, min_value=0.0, max_value=50.0, step=0.5,
+                                         help="0 = desactivado. Sale si el precio cae X% desde la entrada.")
+    take_profit_pct = c_tp.number_input("Take-profit %", value=0.0, min_value=0.0, max_value=200.0, step=1.0,
+                                         help="0 = desactivado. Sale si el precio sube X% desde la entrada.")
+    exit_after_days = c_days.number_input("Salir tras N días", value=0, min_value=0, max_value=500, step=5,
+                                           help="0 = desactivado. Cierra la posición automáticamente tras N días.")
+
+    sl_val  = float(stop_loss_pct)   if stop_loss_pct   > 0 else None
+    tp_val  = float(take_profit_pct) if take_profit_pct > 0 else None
+    days_val = int(exit_after_days)  if exit_after_days > 0 else None
 
     run_btn = st.button("▶ Run Backtest", type="primary", use_container_width=False)
     if not run_btn:
@@ -733,6 +743,9 @@ elif page == "🔬 Backtest":
                 tf=tf,
                 initial_capital=float(initial_capital),
                 years=int(years_back),
+                stop_loss_pct=sl_val,
+                take_profit_pct=tp_val,
+                exit_after_days=days_val,
             )
 
     # ── Summary metrics table ─────────────────────────────────────────────────

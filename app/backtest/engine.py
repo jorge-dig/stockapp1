@@ -242,8 +242,21 @@ def run_backtest(
     tf: Timeframe,
     initial_capital: float = 10_000.0,
     years: int = YEARS,
+    stop_loss_pct: float | None = None,
+    take_profit_pct: float | None = None,
+    exit_after_days: int | None = None,
 ) -> BacktestResult:
-    """Run a full backtest for one ticker × strategy × timeframe."""
+    """
+    Run a full backtest for one ticker × strategy × timeframe.
+
+    Exit logic (in priority order per bar):
+      1. Take-profit hit (high >= entry * (1 + tp/100))
+      2. Stop-loss hit   (low  <= entry * (1 - sl/100))
+      3. Opposing signal fires (sig == -1 while long, or sig == 1 while short)
+      4. Max holding period reached (exit_after_days)
+    For BUY-only strategies (no SELL signal ever fires) stop_loss / take_profit /
+    exit_after_days act as the sole exit mechanism.
+    """
     result = BacktestResult(symbol=symbol, strategy_name=strategy_name, timeframe=tf)
 
     # 1. Load & resample data
@@ -262,6 +275,7 @@ def run_backtest(
 
     # 3. Generate signals
     sigs = generate_signals(df, rules)
+    sig_type = rules.get("signal", "BUY")
 
     # 4. Simulate trades
     capital   = initial_capital
@@ -269,29 +283,72 @@ def run_backtest(
     dates_idx = df["date"].tolist()
     in_trade  = False
     current_trade: Trade | None = None
+    entry_bar: int = 0
 
     for i in range(len(df)):
         sig   = sigs.iloc[i]
         close = df["close"].iloc[i]
+        high  = df["high"].iloc[i]
+        low   = df["low"].iloc[i]
         d     = dates_idx[i]
 
-        if sig == 1 and not in_trade:          # BUY signal
-            current_trade = Trade(entry_date=d, entry_price=close)
-            in_trade = True
-            result.buy_signals.append(d)
-
-        elif sig == -1 and in_trade and current_trade:   # SELL signal
-            current_trade.close(d, close, capital)
-            capital += current_trade.pnl_abs
-            result.trades.append(current_trade)
-            result.sell_signals.append(d)
-            in_trade = False
-            current_trade = None
-
-        # Mark-to-market equity while in trade
+        # ── Exit logic (while in trade) ───────────────────────────────────────
         if in_trade and current_trade:
-            mtm = capital * (close / current_trade.entry_price)
-            equity.append(mtm)
+            exit_price = None
+            exit_reason = None
+
+            ep = current_trade.entry_price
+
+            # 1. Take-profit
+            if take_profit_pct and high >= ep * (1 + take_profit_pct / 100):
+                exit_price  = ep * (1 + take_profit_pct / 100)
+                exit_reason = "TP"
+
+            # 2. Stop-loss
+            elif stop_loss_pct and low <= ep * (1 - stop_loss_pct / 100):
+                exit_price  = ep * (1 - stop_loss_pct / 100)
+                exit_reason = "SL"
+
+            # 3. Opposing signal
+            elif sig == -1:
+                exit_price  = close
+                exit_reason = "signal"
+                result.sell_signals.append(d)
+
+            # 4. Max holding period
+            elif exit_after_days and (i - entry_bar) >= exit_after_days:
+                exit_price  = close
+                exit_reason = "timeout"
+
+            if exit_price is not None:
+                current_trade.close(d, exit_price, capital)
+                capital += current_trade.pnl_abs
+                result.trades.append(current_trade)
+                in_trade = False
+                current_trade = None
+
+        # ── Entry logic ───────────────────────────────────────────────────────
+        if not in_trade:
+            if sig == 1:
+                current_trade = Trade(entry_date=d, entry_price=close)
+                in_trade  = True
+                entry_bar = i
+                result.buy_signals.append(d)
+            elif sig == -1 and sig_type == "SELL":
+                # SELL-only strategy: short trade (inverse logic)
+                current_trade = Trade(entry_date=d, entry_price=close)
+                in_trade  = True
+                entry_bar = i
+                result.sell_signals.append(d)
+
+        # ── Mark-to-market equity ─────────────────────────────────────────────
+        if in_trade and current_trade:
+            if sig_type == "SELL":
+                # Short: profit when price falls
+                mtm = capital * (2 - close / current_trade.entry_price)
+            else:
+                mtm = capital * (close / current_trade.entry_price)
+            equity.append(max(mtm, 0))
         else:
             equity.append(capital)
 
@@ -303,7 +360,7 @@ def run_backtest(
         result.trades.append(current_trade)
 
     result.equity_curve = pd.Series(
-        equity[1:],          # drop the initial pre-loop entry
+        equity[1:],
         index=pd.to_datetime(df["date"]),
     )
     return result
