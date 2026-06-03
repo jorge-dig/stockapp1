@@ -8,14 +8,16 @@ import pandas as pd
 
 def high_low_break(df: pd.DataFrame, lookback: int = 20) -> dict[str, pd.Series]:
     """
-    Detects if the current close breaks above/below the highest/lowest
-    close in the previous `lookback` candles (not including current).
+    Detects if the current close breaks above/below the highest high / lowest low
+    of the previous `lookback` candles (not including current).
+    Uses high for the upper reference and low for the lower reference,
+    which captures the true intraday range the market has visited.
     Returns binary Series: 1 = break, 0 = no break.
     """
-    prev_high = df["close"].shift(1).rolling(lookback).max()
-    prev_low = df["close"].shift(1).rolling(lookback).min()
+    prev_high = df["high"].shift(1).rolling(lookback).max()
+    prev_low  = df["low"].shift(1).rolling(lookback).min()
     break_high = (df["close"] > prev_high).astype(int)
-    break_low = (df["close"] < prev_low).astype(int)
+    break_low  = (df["close"] < prev_low).astype(int)
     return {
         f"break_high_{lookback}": break_high,
         f"break_low_{lookback}": break_low,
