@@ -111,7 +111,7 @@ OSCILLATORS    = {"rsi_14", "stoch_k", "stoch_d", "adx", "adx_dmp", "adx_dmn",
 VOLUME_PANEL   = {"obv"}
 # ATR, bb_bandwidth, macd_* get their own panel (already handled)
 EXCLUDE_OVERLAY = {"atr_14", "bb_bandwidth", "obv", "volume",
-                   "macd_line", "macd_signal", "macd_histogram"} | OSCILLATORS
+                   "macd_line", "macd_signal", "macd_histogram", "kptos"} | OSCILLATORS
 
 
 @st.cache_data(ttl=60)
@@ -492,6 +492,13 @@ elif page == "📊 Charts":
     if not ind_df.empty:
         df = df.merge(ind_df, on="date", how="left")
 
+    # Compute KPTOS on-the-fly if not already in df (e.g. before next scheduler run)
+    if "kptos" not in df.columns and "rsi_14" in df.columns:
+        from app.indicators.custom import kptos as _kptos
+        _res = _kptos(df)
+        if _res:
+            df["kptos"] = _res["kptos"].values
+
     dates = pd.to_datetime(df["date"])
 
     # ── Indicator controls (only show what's actually in df) ──────────────────
@@ -660,7 +667,7 @@ elif page == "📊 Charts":
         last = df.iloc[-1]
         prev = df.iloc[-2] if len(df) > 1 else last
         chg  = (last["close"] - prev["close"]) / prev["close"] * 100 if prev["close"] else 0
-        c1, c2, c3, c4, c5, c6 = st.columns(6)
+        c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
         c1.metric("Last Close",   f"{last['close']:.2f}",  f"{chg:+.2f}%")
         c2.metric("Period High",  f"{df['high'].max():.2f}")
         c3.metric("Period Low",   f"{df['low'].min():.2f}")
@@ -672,6 +679,11 @@ elif page == "📊 Charts":
         if "adx" in df.columns and df["adx"].notna().any():
             adx_val = df["adx"].dropna().iloc[-1]
             c6.metric("ADX", f"{adx_val:.1f}", "Strong" if adx_val > 25 else "Weak")
+        if "kptos" in df.columns and df["kptos"].notna().any():
+            kptos_val = df["kptos"].dropna().iloc[-1]
+            kptos_map = {1.0: ("COMPRA", "🟢"), -1.0: ("VENTA", "🔴"), 0.0: ("NEUTRAL", "⚪")}
+            kptos_label, kptos_icon = kptos_map.get(kptos_val, ("NEUTRAL", "⚪"))
+            c7.metric("KPTOS", f"{kptos_icon} {kptos_label}")
 
 # ================================================================
 # PAGE: BACKTEST
