@@ -264,5 +264,7 @@ def calc_all_custom(df: pd.DataFrame) -> dict[str, pd.Series]:
 
     results.update(trend_strength(df))
     results.update(candle_patterns(df))
-    results.update(kptos(df))
+    # Enrich df with swing columns so kptos can use them
+    df_enriched = df.assign(**{k: v for k, v in results.items() if k.startswith("is_swing_") or k.startswith("swing_")})
+    results.update(kptos(df_enriched))
     return results
