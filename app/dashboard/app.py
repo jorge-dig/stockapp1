@@ -492,8 +492,8 @@ elif page == "📊 Charts":
     if not ind_df.empty:
         df = df.merge(ind_df, on="date", how="left")
 
-    # Compute KPTOS on-the-fly if not already in df (e.g. before next scheduler run)
-    if "kptos" not in df.columns and "rsi_14" in df.columns:
+    # Always recompute KPTOS on-the-fly from current indicator columns
+    if "rsi_14" in df.columns and "swing_high_2" in df.columns:
         from app.indicators.custom import kptos as _kptos
         _res = _kptos(df)
         if _res:
