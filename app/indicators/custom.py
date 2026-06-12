@@ -182,62 +182,60 @@ def kptos(df: pd.DataFrame, rsi_col: str = "rsi_14", swing_n: int = 2, window: i
       COMPRA  → NEUTRAL: RSI < 60 AND close < recent swing low
       NEUTRAL → VENTA  : RSI < 40 for 2+ consecutive bars AND close < recent swing low
       VENTA   → NEUTRAL: RSI > 40 AND close > recent swing high
+
+    Uses the forward-filled swing_high/low columns (shifted 1 bar) so we compare
+    against the previous local max/min, not the current bar's level.
+    Only considers swing points within the last `window` bars.
     """
     if rsi_col not in df.columns:
         return {}
 
-    rsi        = df[rsi_col].values
-    closes     = df["close"].values
-    highs      = df["high"].values
-    lows       = df["low"].values
-    is_sh_col  = f"is_swing_high_{swing_n}"
-    is_sl_col  = f"is_swing_low_{swing_n}"
+    sh_col    = f"swing_high_{swing_n}"
+    sl_col    = f"swing_low_{swing_n}"
+    is_sh_col = f"is_swing_high_{swing_n}"
+    is_sl_col = f"is_swing_low_{swing_n}"
 
-    is_swing_h = df[is_sh_col].values if is_sh_col in df.columns else np.zeros(len(df))
-    is_swing_l = df[is_sl_col].values if is_sl_col in df.columns else np.zeros(len(df))
+    if sh_col not in df.columns or sl_col not in df.columns:
+        return {}
 
-    n = len(df)
+    rsi    = df[rsi_col]
+    closes = df["close"]
+
+    is_sh = df[is_sh_col].fillna(0) if is_sh_col in df.columns else pd.Series(0, index=df.index)
+    is_sl = df[is_sl_col].fillna(0) if is_sl_col in df.columns else pd.Series(0, index=df.index)
+
+    # Keep swing level only when there's a swing within the last `window` bars
+    has_recent_sh = is_sh.rolling(window, min_periods=1).max()
+    has_recent_sl = is_sl.rolling(window, min_periods=1).max()
+
+    # Shift by 1: compare current close against the level established BEFORE this bar
+    sh_ref = df[sh_col].where(has_recent_sh == 1).shift(1)
+    sl_ref = df[sl_col].where(has_recent_sl == 1).shift(1)
+
+    rsi_above60_2 = (rsi > 60) & (rsi.shift(1) > 60)
+    rsi_below40_2 = (rsi < 40) & (rsi.shift(1) < 40)
+    breaks_high   = closes > sh_ref
+    breaks_low    = closes < sl_ref
+
+    n      = len(df)
     states = np.zeros(n, dtype=float)
-    state  = 0  # 0=NEUTRAL, 1=COMPRA, -1=VENTA
+    state  = 0
 
     for i in range(2, n):
-        r   = rsi[i]
-        r1  = rsi[i - 1]
-        c   = closes[i]
-
-        # Most recent swing high/low within `window` bars
-        start = max(0, i - window + 1)
-        sh_val = np.nan
-        sl_val = np.nan
-        for j in range(i, start - 1, -1):
-            if np.isnan(sh_val) and is_swing_h[j]:
-                sh_val = highs[j]
-            if np.isnan(sl_val) and is_swing_l[j]:
-                sl_val = lows[j]
-            if not np.isnan(sh_val) and not np.isnan(sl_val):
-                break
-
-        rsi_above60_2 = (not np.isnan(r)) and (not np.isnan(r1)) and r > 60 and r1 > 60
-        rsi_below40_2 = (not np.isnan(r)) and (not np.isnan(r1)) and r < 40 and r1 < 40
-        breaks_high   = (not np.isnan(sh_val)) and c > sh_val
-        breaks_low    = (not np.isnan(sl_val)) and c < sl_val
-
         if state == 0:
-            if rsi_above60_2 and breaks_high:
+            if rsi_above60_2.iloc[i] and breaks_high.iloc[i]:
                 state = 1
-            elif rsi_below40_2 and breaks_low:
+            elif rsi_below40_2.iloc[i] and breaks_low.iloc[i]:
                 state = -1
         elif state == 1:
-            if (not np.isnan(r)) and r < 60 and breaks_low:
+            if rsi.iloc[i] < 60 and breaks_low.iloc[i]:
                 state = 0
         elif state == -1:
-            if (not np.isnan(r)) and r > 40 and breaks_high:
+            if rsi.iloc[i] > 40 and breaks_high.iloc[i]:
                 state = 0
-
         states[i] = state
 
-    series = pd.Series(states, index=df.index)
-    return {"kptos": series}
+    return {"kptos": pd.Series(states, index=df.index)}
 
 
 def calc_all_custom(df: pd.DataFrame) -> dict[str, pd.Series]:
