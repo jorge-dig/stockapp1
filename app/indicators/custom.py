@@ -201,8 +201,10 @@ def kptos(df: pd.DataFrame, rsi_col: str = "rsi_14", swing_n: int = 2, window: i
     rsi    = df[rsi_col]
     closes = df["close"]
 
-    is_sh = df[is_sh_col].fillna(0) if is_sh_col in df.columns else pd.Series(0, index=df.index)
-    is_sl = df[is_sl_col].fillna(0) if is_sl_col in df.columns else pd.Series(0, index=df.index)
+    # Detect new swings from when the forward-filled level changes value.
+    # This avoids dependency on is_swing_high/low columns which may be absent from DB.
+    is_sh = (df[sh_col] != df[sh_col].shift(1)).astype(int)
+    is_sl = (df[sl_col] != df[sl_col].shift(1)).astype(int)
 
     # Keep swing level only when there's a swing within the last `window` bars
     has_recent_sh = is_sh.rolling(window, min_periods=1).max()
