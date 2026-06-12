@@ -492,6 +492,13 @@ elif page == "📊 Charts":
     if not ind_df.empty:
         df = df.merge(ind_df, on="date", how="left")
 
+    # Compute KPTOS on-the-fly if not already in df (e.g. before next scheduler run)
+    if "kptos" not in df.columns and "rsi_14" in df.columns:
+        from app.indicators.custom import kptos as _kptos
+        _res = _kptos(df)
+        if _res:
+            df["kptos"] = _res["kptos"].values
+
     dates = pd.to_datetime(df["date"])
 
     # ── Indicator controls (only show what's actually in df) ──────────────────
