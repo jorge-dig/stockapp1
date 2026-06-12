@@ -520,17 +520,18 @@ elif page == "📊 Charts":
             osc_opts,
             default=[x for x in ["rsi_14"] if x in osc_opts],
         )
-        col_a, col_b, col_c, col_d = st.columns(4)
+        col_a, col_b, col_c, col_d, col_e = st.columns(5)
         show_bb     = col_a.checkbox("Bollinger Bands", value=show_bb)
         show_volume = col_b.checkbox("Volume", value=True)
         show_macd   = col_c.checkbox("MACD", value="macd_line" in avail)
         show_atr    = col_d.checkbox("ATR", value=False)
+        show_kptos  = col_e.checkbox("KPTOS", value="kptos" in avail)
 
     # ── Build subplot layout ──────────────────────────────────────────────────
     subplot_specs = []
     subplot_specs.append(0.55)          # price
     if show_volume:  subplot_specs.append(0.12)
-    show_kptos = "kptos" in df.columns and df["kptos"].notna().any()
+    show_kptos = show_kptos and "kptos" in df.columns and df["kptos"].notna().any()
     if show_kptos:   subplot_specs.append(0.06)
     if selected_osc: subplot_specs.append(0.15)
     if show_macd:    subplot_specs.append(0.12)
