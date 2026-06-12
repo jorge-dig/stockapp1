@@ -530,6 +530,8 @@ elif page == "📊 Charts":
     subplot_specs = []
     subplot_specs.append(0.55)          # price
     if show_volume:  subplot_specs.append(0.12)
+    show_kptos = "kptos" in df.columns and df["kptos"].notna().any()
+    if show_kptos:   subplot_specs.append(0.06)
     if selected_osc: subplot_specs.append(0.15)
     if show_macd:    subplot_specs.append(0.12)
     if show_atr:     subplot_specs.append(0.10)
@@ -594,6 +596,24 @@ elif page == "📊 Charts":
             marker_color=vol_colors, showlegend=False,
         ), row=current_row, col=1)
         fig.update_yaxes(title_text="Vol", row=current_row, col=1, tickformat=".2s")
+        current_row += 1
+
+    if show_kptos:
+        kptos_colors = [
+            "#26a69a" if v == 1 else ("#ef5350" if v == -1 else "#555555")
+            for v in df["kptos"].fillna(0)
+        ]
+        fig.add_trace(go.Bar(
+            x=dates, y=[1] * len(dates),
+            marker_color=kptos_colors, showlegend=False,
+            hovertext=[
+                "COMPRA" if v == 1 else ("VENTA" if v == -1 else "NEUTRAL")
+                for v in df["kptos"].fillna(0)
+            ],
+            hovertemplate="%{hovertext}<extra></extra>",
+        ), row=current_row, col=1)
+        fig.update_yaxes(title_text="KPTOS", row=current_row, col=1,
+                         showticklabels=False, fixedrange=True)
         current_row += 1
 
     if selected_osc:
