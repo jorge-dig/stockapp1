@@ -1057,31 +1057,55 @@ elif page == "⚙️ Strategies":
                 st.rerun()
         for strat in strat_list:
             with st.expander(f"{'✅' if strat['active'] else '⏸'} {strat['name']}"):
-                st.caption(strat["description"])
-                st.json(strat["rules"])
-                c1, c2, c3 = st.columns(3)
-                with c1:
-                    if strat["active"]:
-                        if st.button("Deactivate", key=f"ds_{strat['id']}"):
-                            with get_session() as session:
-                                s = session.query(Strategy).filter_by(id=strat["id"]).first()
-                                s.active = 0
-                                session.commit()
-                            st.rerun()
-                    else:
-                        if st.button("Activate", key=f"as_{strat['id']}"):
-                            with get_session() as session:
-                                s = session.query(Strategy).filter_by(id=strat["id"]).first()
-                                s.active = 1
-                                session.commit()
-                            st.rerun()
-                with c2:
-                    if st.button("Delete", key=f"del_{strat['id']}"):
+                with st.form(key=f"edit_{strat['id']}"):
+                    edit_name = st.text_input("Name", value=strat["name"], key=f"en_{strat['id']}")
+                    edit_desc = st.text_area("Description", value=strat["description"], height=60, key=f"ed_{strat['id']}")
+                    rules = strat["rules"]
+                    edit_signal = st.selectbox("Signal Type", ["BUY", "SELL", "ALERT"],
+                                               index=["BUY","SELL","ALERT"].index(rules.get("signal","BUY")),
+                                               key=f"es_{strat['id']}")
+                    edit_logic  = st.selectbox("Condition Logic", ["AND", "OR"],
+                                               index=["AND","OR"].index(rules.get("logic","AND")),
+                                               key=f"el_{strat['id']}")
+                    conds = rules.get("conditions", [])
+                    if isinstance(conds, dict) and "conditions" in conds:
+                        conds = conds["conditions"]
+                    elif isinstance(conds, dict):
+                        conds = [conds]
+                    edit_conds = st.text_area("Conditions JSON", value=json.dumps(conds, indent=2),
+                                              height=180, key=f"ec_{strat['id']}")
+                    c1, c2, c3 = st.columns(3)
+                    save = c1.form_submit_button("💾 Guardar")
+                    toggle_label = "⏸ Desactivar" if strat["active"] else "▶ Activar"
+                    toggle = c2.form_submit_button(toggle_label)
+                    delete = c3.form_submit_button("🗑 Eliminar")
+
+                if save:
+                    try:
+                        new_conds = json.loads(edit_conds)
+                        new_rules = {"conditions": new_conds, "logic": edit_logic, "signal": edit_signal}
                         with get_session() as session:
                             s = session.query(Strategy).filter_by(id=strat["id"]).first()
-                            session.delete(s)
+                            s.name = edit_name
+                            s.description = edit_desc
+                            s.rules_json = new_rules
                             session.commit()
+                        st.success("Estrategia guardada.")
                         st.rerun()
+                    except json.JSONDecodeError as e:
+                        st.error(f"JSON inválido: {e}")
+                if toggle:
+                    with get_session() as session:
+                        s = session.query(Strategy).filter_by(id=strat["id"]).first()
+                        s.active = 0 if strat["active"] else 1
+                        session.commit()
+                    st.rerun()
+                if delete:
+                    with get_session() as session:
+                        s = session.query(Strategy).filter_by(id=strat["id"]).first()
+                        session.delete(s)
+                        session.commit()
+                    st.rerun()
 
     with tab2:
         st.subheader("Create Custom Strategy")
