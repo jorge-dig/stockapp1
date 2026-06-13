@@ -69,13 +69,19 @@ def eval_condition(condition: dict, row: dict, prev_row: dict | None = None) -> 
 
     # Crossover operators require previous row
     if op in ("cross_above", "cross_below") and prev_row is not None:
-        ind2 = condition.get("indicator2")
-        if not ind2:
-            return None
         val1_prev = _get_value(prev_row, ind)
-        val2_curr = _get_value(row, ind2)
-        val2_prev = _get_value(prev_row, ind2)
-        if any(v is None for v in [val1_prev, val2_curr, val2_prev]):
+        if val1_prev is None:
+            return None
+        ind2 = condition.get("indicator2")
+        if ind2:
+            val2_curr = _get_value(row, ind2)
+            val2_prev = _get_value(prev_row, ind2)
+            if val2_curr is None or val2_prev is None:
+                return None
+        elif "value" in condition:
+            val2_curr = float(condition["value"])
+            val2_prev = val2_curr
+        else:
             return None
         if op == "cross_above":
             return val1_prev <= val2_prev and val1 > val2_curr
