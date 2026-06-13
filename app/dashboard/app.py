@@ -706,6 +706,33 @@ elif page == "📊 Charts":
             kptos_label, kptos_icon = kptos_map.get(kptos_val, ("NEUTRAL", "⚪"))
             c7.metric("KPTOS", f"{kptos_icon} {kptos_label}")
 
+    if "kptos" in df.columns and df["kptos"].notna().any():
+        with st.expander("🔍 KPTOS — Detalle y cambios de estado"):
+            state_map = {1.0: "🟢 COMPRA", -1.0: "🔴 VENTA", 0.0: "⚪ NEUTRAL"}
+            debug_cols = ["date", "close", "rsi_14", "swing_high_2", "swing_low_2", "kptos"]
+            debug_df = df[[c for c in debug_cols if c in df.columns]].copy()
+            debug_df["estado"] = debug_df["kptos"].map(lambda v: state_map.get(v, "⚪ NEUTRAL"))
+            debug_df = debug_df.drop(columns=["kptos"])
+            for col in ["close", "swing_high_2", "swing_low_2"]:
+                if col in debug_df.columns:
+                    debug_df[col] = debug_df[col].round(2)
+            if "rsi_14" in debug_df.columns:
+                debug_df["rsi_14"] = debug_df["rsi_14"].round(1)
+
+            st.markdown("**Cambios de estado**")
+            changes = debug_df[debug_df["estado"] != debug_df["estado"].shift(1)].iloc[1:]
+            if changes.empty:
+                st.warning("Sin cambios de estado — siempre NEUTRAL. Revisa que los indicadores estén recalculados.")
+            else:
+                st.dataframe(changes, use_container_width=True, hide_index=True)
+
+            st.markdown("**Distribución**")
+            dist = debug_df["estado"].value_counts().rename_axis("Estado").reset_index(name="Días")
+            st.dataframe(dist, use_container_width=True, hide_index=True)
+
+            st.markdown("**Tabla completa (últimos 60 días)**")
+            st.dataframe(debug_df.tail(60), use_container_width=True, hide_index=True)
+
 # ================================================================
 # PAGE: BACKTEST
 # ================================================================
