@@ -94,6 +94,9 @@ def eval_condition(condition: dict, row: dict, prev_row: dict | None = None) -> 
 def eval_strategy(rules: dict, row: dict, prev_row: dict | None = None) -> bool:
     """Evaluates all conditions with AND/OR logic."""
     conditions = rules.get("conditions", [])
+    # Tolerate a single condition dict instead of a list
+    if isinstance(conditions, dict):
+        conditions = [conditions]
     logic = rules.get("logic", "AND").upper()
     if not conditions:
         return False
