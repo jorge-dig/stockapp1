@@ -51,6 +51,9 @@ def eval_condition(condition: dict, row: dict, prev_row: dict | None = None) -> 
     Evaluates a single condition against a row dict of {indicator: value}.
     Returns True/False, or None if data is missing (treated as False).
     """
+    if not isinstance(condition, dict) or "indicator" not in condition or "op" not in condition:
+        logger.warning(f"Skipping malformed condition (missing 'indicator' or 'op'): {condition}")
+        return None
     ind = condition["indicator"]
     op = condition["op"]
     val1 = _get_value(row, ind)

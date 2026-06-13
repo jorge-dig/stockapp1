@@ -813,6 +813,9 @@ elif page == "🔬 Backtest":
         import json as _json
         rules = _json.loads(rules)
 
+    with st.expander("📋 Rules JSON (debug)", expanded=False):
+        st.json(rules)
+
     results: dict = {}
     with st.spinner(f"Running backtest for {sel_symbol} / {sel_strategy}…"):
         for tf in sel_tfs:
