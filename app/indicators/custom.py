@@ -251,6 +251,12 @@ def calc_all_custom(df: pd.DataFrame) -> dict[str, pd.Series]:
     results.update(swing_levels(df, n=2))
     results.update(swing_levels(df, n=3))
 
+    # Price distance above/below key MAs as percentage
+    for ma in ["sma_200", "sma_50", "ema_200", "ema_50"]:
+        if ma in df.columns:
+            pct_col = f"close_over_{ma}_pct"
+            results[pct_col] = ((df["close"] / df[ma]) - 1) * 100
+
     # Multi-candle crossovers for key pairs
     for col1, col2 in [("ema_9", "ema_20"), ("ema_20", "ema_50"), ("ema_50", "ema_200"), ("close", "sma_200")]:
         if col1 in df.columns and col2 in df.columns:
