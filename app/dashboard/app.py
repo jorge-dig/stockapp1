@@ -709,15 +709,17 @@ elif page == "📊 Charts":
     if "kptos" in df.columns and df["kptos"].notna().any():
         with st.expander("🔍 KPTOS — Detalle y cambios de estado"):
             state_map = {1.0: "🟢 COMPRA", -1.0: "🔴 VENTA", 0.0: "⚪ NEUTRAL"}
-            debug_cols = ["date", "close", "rsi_14", "swing_high_2", "swing_low_2", "kptos"]
-            debug_df = df[[c for c in debug_cols if c in df.columns]].copy()
+
+            # Tabla completa con todos los indicadores disponibles
+            debug_df = df.copy()
             debug_df["estado"] = debug_df["kptos"].map(lambda v: state_map.get(v, "⚪ NEUTRAL"))
             debug_df = debug_df.drop(columns=["kptos"])
-            for col in ["close", "swing_high_2", "swing_low_2"]:
-                if col in debug_df.columns:
-                    debug_df[col] = debug_df[col].round(2)
-            if "rsi_14" in debug_df.columns:
-                debug_df["rsi_14"] = debug_df["rsi_14"].round(1)
+            # Redondear columnas numéricas a 2 decimales
+            num_cols = debug_df.select_dtypes(include="number").columns
+            debug_df[num_cols] = debug_df[num_cols].round(2)
+            # Mover estado al frente
+            cols_order = ["date", "estado"] + [c for c in debug_df.columns if c not in ("date", "estado")]
+            debug_df = debug_df[cols_order]
 
             st.markdown("**Cambios de estado**")
             changes = debug_df[debug_df["estado"] != debug_df["estado"].shift(1)].iloc[1:]
@@ -730,8 +732,9 @@ elif page == "📊 Charts":
             dist = debug_df["estado"].value_counts().rename_axis("Estado").reset_index(name="Días")
             st.dataframe(dist, use_container_width=True, hide_index=True)
 
-            st.markdown("**Tabla completa (últimos 60 días)**")
-            st.dataframe(debug_df.tail(60), use_container_width=True, hide_index=True)
+            st.markdown("**Tabla completa (últimos 2 años)**")
+            cutoff_2y = date.today() - timedelta(days=730)
+            st.dataframe(debug_df[debug_df["date"] >= cutoff_2y], use_container_width=True, hide_index=True)
 
 # ================================================================
 # PAGE: BACKTEST
