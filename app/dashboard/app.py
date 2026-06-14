@@ -505,6 +505,14 @@ elif page == "📊 Charts":
         if _res:
             df["kptos"] = _res["kptos"].values
 
+    # Compute SR zones on-the-fly if not in df
+    if "sr_resist_1" not in df.columns and "is_swing_high_2" in df.columns:
+        from app.indicators.custom import support_resistance_zones as _sr
+        with st.spinner("Calculando zonas S/R…"):
+            _sr_res = _sr(df)
+        for k, v in _sr_res.items():
+            df[k] = v.values
+
     dates = pd.to_datetime(df["date"])
 
     # ── Indicator controls (only show what's actually in df) ──────────────────
@@ -533,7 +541,7 @@ elif page == "📊 Charts":
         show_atr    = col_d.checkbox("ATR", value=False)
         show_kptos  = col_e.checkbox("KPTOS", value="kptos" in avail)
         has_sr = any(c in df.columns for c in SR_RESIST | SR_SUPPORT)
-        show_sr = col_f.checkbox("S/R Zones", value=has_sr)
+        show_sr = col_f.checkbox("S/R Zones", value=True)
 
     # ── Build subplot layout ──────────────────────────────────────────────────
     subplot_specs = []
