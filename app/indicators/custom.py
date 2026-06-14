@@ -262,7 +262,7 @@ def _cluster_levels(prices: np.ndarray, cluster_pct: float = 2.0) -> list[dict]:
 def support_resistance_zones(
     df: pd.DataFrame,
     swing_n: int = 2,
-    lookback_bars: int = 1260,   # ~5 trading years
+    lookback_bars: int = 252,    # ~1 trading year
     cluster_pct: float = 2.0,
     max_zones: int = 3,
 ) -> dict[str, pd.Series]:
