@@ -435,7 +435,7 @@ elif page == "📊 Charts":
 
     col1, col2, col3 = st.columns([3, 2, 2])
     symbol     = col1.selectbox("Ticker", tickers_df["symbol"].tolist())
-    days       = col2.selectbox("Period", [90, 180, 365, 730, 1825], index=2,
+    days       = col2.selectbox("Period", [90, 180, 365, 730, 1825], index=3,
                                 format_func=lambda x: {90:"3M",180:"6M",365:"1Y",730:"2Y",1825:"5Y"}.get(x,f"{x}d"))
     chart_type = col3.selectbox("Chart", ["Candlestick", "Line"])
 
