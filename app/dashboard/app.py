@@ -107,7 +107,9 @@ PRICE_OVERLAYS = {"sma_20", "sma_50", "sma_200", "ema_9", "ema_20", "ema_50", "e
                   "prev_high_20", "prev_low_20", "prev_high_52", "prev_low_52",
                   "swing_high_2", "swing_low_2", "swing_high_3", "swing_low_3"}
 OSCILLATORS    = {"rsi_14", "stoch_k", "stoch_d", "adx", "adx_dmp", "adx_dmn",
-                  "bb_percent", "trend_strength", "trend_direction"}
+                  "bb_percent", "trend_strength", "trend_direction",
+                  "close_over_sma_200_pct", "close_over_sma_50_pct",
+                  "close_over_ema_200_pct", "close_over_ema_50_pct"}
 VOLUME_PANEL   = {"obv"}
 # ATR, bb_bandwidth, macd_* get their own panel (already handled)
 EXCLUDE_OVERLAY = {"atr_14", "bb_bandwidth", "obv", "volume",
