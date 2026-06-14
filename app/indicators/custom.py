@@ -265,10 +265,11 @@ def support_resistance_zones(
     max_zones: int = 3,
 ) -> dict[str, pd.Series]:
     """
-    Rolling support/resistance zones from swing highs/lows.
-    For each bar i, uses only swing data from the previous lookback_bars bars
-    (no lookahead). Stores the nearest max_zones resistance levels above the
-    current price and max_zones support levels below it.
+    Rolling support/resistance zones from ALL swing highs and lows combined.
+    For each bar i, takes the full universe of swing highs AND lows from the
+    previous lookback_bars, clusters them together, then classifies each zone
+    as resistance (above current price) or support (below current price).
+    No lookahead: only past data is used for each bar.
     """
     is_sh_col = f"is_swing_high_{swing_n}"
     is_sl_col = f"is_swing_low_{swing_n}"
@@ -293,15 +294,24 @@ def support_resistance_zones(
         start = max(0, i - lookback_bars)
         close = closes[i]
 
+        # All swing levels: highs where is_swing_high==1 AND lows where is_swing_low==1
         sh_prices = highs[start:i][is_sh[start:i] == 1]
         sl_prices = lows[start:i][is_sl[start:i] == 1]
+        all_prices = np.concatenate([sh_prices, sl_prices])
 
+        if len(all_prices) == 0:
+            continue
+
+        # Cluster the combined universe
+        all_zones = _cluster_levels(all_prices, cluster_pct)
+
+        # Classify by position relative to current price
         resist_zones = sorted(
-            [z for z in _cluster_levels(sh_prices, cluster_pct) if z["center"] > close],
+            [z for z in all_zones if z["center"] > close],
             key=lambda z: z["center"],
         )
         support_zones = sorted(
-            [z for z in _cluster_levels(sl_prices, cluster_pct) if z["center"] < close],
+            [z for z in all_zones if z["center"] < close],
             key=lambda z: z["center"], reverse=True,
         )
 
