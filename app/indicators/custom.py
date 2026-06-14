@@ -241,18 +241,20 @@ def kptos(df: pd.DataFrame, rsi_col: str = "rsi_14", swing_n: int = 2, window: i
 
 
 def _cluster_levels(prices: np.ndarray, cluster_pct: float = 2.0) -> list[dict]:
-    """Groups price levels within cluster_pct% of each other into zones."""
+    """Groups price levels within cluster_pct% of the cluster anchor (first point)."""
     if len(prices) == 0:
         return []
     prices = np.sort(prices)
     zones = []
     cluster = [prices[0]]
+    anchor = prices[0]
     for p in prices[1:]:
-        if abs(p - np.mean(cluster)) / np.mean(cluster) * 100 <= cluster_pct:
+        if abs(p - anchor) / anchor * 100 <= cluster_pct:
             cluster.append(p)
         else:
             zones.append({"center": float(np.mean(cluster)), "touches": len(cluster)})
             cluster = [p]
+            anchor = p
     zones.append({"center": float(np.mean(cluster)), "touches": len(cluster)})
     return zones
 

@@ -505,8 +505,8 @@ elif page == "📊 Charts":
         if _res:
             df["kptos"] = _res["kptos"].values
 
-    # Compute SR zones on-the-fly if not in df
-    if "sr_resist_1" not in df.columns and "is_swing_high_2" in df.columns:
+    # Always recompute SR zones on-the-fly to avoid stale DB values
+    if "is_swing_high_2" in df.columns:
         from app.indicators.custom import support_resistance_zones as _sr
         with st.spinner("Calculando zonas S/R…"):
             _sr_res = _sr(df)
