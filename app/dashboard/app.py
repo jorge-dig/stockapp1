@@ -110,10 +110,14 @@ OSCILLATORS    = {"rsi_14", "stoch_k", "stoch_d", "adx", "adx_dmp", "adx_dmn",
                   "bb_percent", "trend_strength", "trend_direction",
                   "close_over_sma_200_pct", "close_over_sma_50_pct",
                   "close_over_ema_200_pct", "close_over_ema_50_pct"}
+SR_RESIST = {f"sr_resist_{k}" for k in range(1, 4)}
+SR_SUPPORT = {f"sr_support_{k}" for k in range(1, 4)}
+SR_STR    = {f"sr_resist_{k}_str" for k in range(1, 4)} | {f"sr_support_{k}_str" for k in range(1, 4)}
+
 VOLUME_PANEL   = {"obv"}
 # ATR, bb_bandwidth, macd_* get their own panel (already handled)
 EXCLUDE_OVERLAY = {"atr_14", "bb_bandwidth", "obv", "volume",
-                   "macd_line", "macd_signal", "macd_histogram", "kptos"} | OSCILLATORS
+                   "macd_line", "macd_signal", "macd_histogram", "kptos"} | OSCILLATORS | SR_RESIST | SR_SUPPORT | SR_STR
 
 
 @st.cache_data(ttl=60)
@@ -522,12 +526,14 @@ elif page == "📊 Charts":
             osc_opts,
             default=[x for x in ["rsi_14"] if x in osc_opts],
         )
-        col_a, col_b, col_c, col_d, col_e = st.columns(5)
+        col_a, col_b, col_c, col_d, col_e, col_f = st.columns(6)
         show_bb     = col_a.checkbox("Bollinger Bands", value=show_bb)
         show_volume = col_b.checkbox("Volume", value=True)
         show_macd   = col_c.checkbox("MACD", value="macd_line" in avail)
         show_atr    = col_d.checkbox("ATR", value=False)
         show_kptos  = col_e.checkbox("KPTOS", value="kptos" in avail)
+        has_sr = any(c in df.columns for c in SR_RESIST | SR_SUPPORT)
+        show_sr = col_f.checkbox("S/R Zones", value=has_sr)
 
     # ── Build subplot layout ──────────────────────────────────────────────────
     subplot_specs = []
@@ -585,6 +591,26 @@ elif page == "📊 Charts":
                 line=dict(color="rgba(150,150,150,0.4)", width=0.6, dash="dot"),
                 showlegend=False, connectgaps=False,
             ), row=1, col=1)
+
+    # Support / Resistance zones
+    if show_sr:
+        sr_resist_colors = ["rgba(239,83,80,0.7)", "rgba(239,83,80,0.45)", "rgba(239,83,80,0.25)"]
+        sr_support_colors= ["rgba(38,166,154,0.7)", "rgba(38,166,154,0.45)", "rgba(38,166,154,0.25)"]
+        for k in range(1, 4):
+            rc = f"sr_resist_{k}"
+            sc = f"sr_support_{k}"
+            if rc in df.columns and df[rc].notna().any():
+                fig.add_trace(go.Scatter(
+                    x=dates, y=df[rc], name=f"Resist {k}",
+                    line=dict(color=sr_resist_colors[k-1], width=1.2, dash="dot"),
+                    connectgaps=False, showlegend=True,
+                ), row=1, col=1)
+            if sc in df.columns and df[sc].notna().any():
+                fig.add_trace(go.Scatter(
+                    x=dates, y=df[sc], name=f"Support {k}",
+                    line=dict(color=sr_support_colors[k-1], width=1.2, dash="dot"),
+                    connectgaps=False, showlegend=True,
+                ), row=1, col=1)
 
     fig.update_yaxes(title_text="Price", row=1, col=1)
 

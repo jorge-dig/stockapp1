@@ -240,6 +240,81 @@ def kptos(df: pd.DataFrame, rsi_col: str = "rsi_14", swing_n: int = 2, window: i
     return {"kptos": pd.Series(states, index=df.index)}
 
 
+def _cluster_levels(prices: np.ndarray, cluster_pct: float = 2.0) -> list[dict]:
+    """Groups price levels within cluster_pct% of each other into zones."""
+    if len(prices) == 0:
+        return []
+    prices = np.sort(prices)
+    zones = []
+    cluster = [prices[0]]
+    for p in prices[1:]:
+        if abs(p - np.mean(cluster)) / np.mean(cluster) * 100 <= cluster_pct:
+            cluster.append(p)
+        else:
+            zones.append({"center": float(np.mean(cluster)), "touches": len(cluster)})
+            cluster = [p]
+    zones.append({"center": float(np.mean(cluster)), "touches": len(cluster)})
+    return zones
+
+
+def support_resistance_zones(
+    df: pd.DataFrame,
+    swing_n: int = 2,
+    lookback_bars: int = 1260,   # ~5 trading years
+    cluster_pct: float = 2.0,
+    max_zones: int = 3,
+) -> dict[str, pd.Series]:
+    """
+    Rolling support/resistance zones from swing highs/lows.
+    For each bar i, uses only swing data from the previous lookback_bars bars
+    (no lookahead). Stores the nearest max_zones resistance levels above the
+    current price and max_zones support levels below it.
+    """
+    is_sh_col = f"is_swing_high_{swing_n}"
+    is_sl_col = f"is_swing_low_{swing_n}"
+    if is_sh_col not in df.columns or is_sl_col not in df.columns:
+        return {}
+
+    n = len(df)
+    highs   = df["high"].values
+    lows    = df["low"].values
+    closes  = df["close"].values
+    is_sh   = df[is_sh_col].fillna(0).values.astype(float)
+    is_sl   = df[is_sl_col].fillna(0).values.astype(float)
+
+    out = {}
+    for k in range(1, max_zones + 1):
+        out[f"sr_resist_{k}"]     = np.full(n, np.nan)
+        out[f"sr_resist_{k}_str"] = np.full(n, np.nan)
+        out[f"sr_support_{k}"]    = np.full(n, np.nan)
+        out[f"sr_support_{k}_str"]= np.full(n, np.nan)
+
+    for i in range(1, n):
+        start = max(0, i - lookback_bars)
+        close = closes[i]
+
+        sh_prices = highs[start:i][is_sh[start:i] == 1]
+        sl_prices = lows[start:i][is_sl[start:i] == 1]
+
+        resist_zones = sorted(
+            [z for z in _cluster_levels(sh_prices, cluster_pct) if z["center"] > close],
+            key=lambda z: z["center"],
+        )
+        support_zones = sorted(
+            [z for z in _cluster_levels(sl_prices, cluster_pct) if z["center"] < close],
+            key=lambda z: z["center"], reverse=True,
+        )
+
+        for k, zone in enumerate(resist_zones[:max_zones], 1):
+            out[f"sr_resist_{k}"][i]     = zone["center"]
+            out[f"sr_resist_{k}_str"][i] = zone["touches"]
+        for k, zone in enumerate(support_zones[:max_zones], 1):
+            out[f"sr_support_{k}"][i]    = zone["center"]
+            out[f"sr_support_{k}_str"][i]= zone["touches"]
+
+    return {k: pd.Series(v, index=df.index) for k, v in out.items()}
+
+
 def calc_all_custom(df: pd.DataFrame) -> dict[str, pd.Series]:
     """Calculate all custom indicators on a OHLCV + standard indicator DataFrame."""
     if df.empty or len(df) < 30:
@@ -273,4 +348,5 @@ def calc_all_custom(df: pd.DataFrame) -> dict[str, pd.Series]:
     # Enrich df with swing columns so kptos can use them
     df_enriched = df.assign(**{k: v for k, v in results.items() if k.startswith("is_swing_") or k.startswith("swing_")})
     results.update(kptos(df_enriched))
+    results.update(support_resistance_zones(df_enriched))
     return results
