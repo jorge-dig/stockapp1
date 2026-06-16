@@ -498,23 +498,7 @@ elif page == "📊 Charts":
     if not ind_df.empty:
         df = df.merge(ind_df, on="date", how="left")
 
-    # Use DB values for KPTOS; fall back to on-the-fly only if missing
-    if "kptos" not in df.columns or df["kptos"].isna().all():
-        if "rsi_14" in df.columns and "swing_high_2" in df.columns:
-            from app.indicators.custom import kptos as _kptos
-            _res = _kptos(df)
-            if _res:
-                df["kptos"] = _res["kptos"].values
-
-    # Use DB values for SR zones; fall back to on-the-fly only if missing
-    sr_cols = [f"sr_resist_{k}" for k in range(1, 4)] + [f"sr_support_{k}" for k in range(1, 4)]
-    if not any(c in df.columns and df[c].notna().any() for c in sr_cols):
-        if "is_swing_high_2" in df.columns:
-            from app.indicators.custom import support_resistance_zones as _sr
-            with st.spinner("Calculando zonas S/R…"):
-                _sr_res = _sr(df)
-            for k, v in _sr_res.items():
-                df[k] = v.values
+    # KPTOS and SR zones come from DB only — no on-the-fly fallback
 
     dates = pd.to_datetime(df["date"])
 
