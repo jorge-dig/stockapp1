@@ -933,45 +933,63 @@ elif page == "🔬 Backtest":
                         line=dict(color=color, width=1), connectgaps=False,
                     ), row=1, col=1)
 
-            # BUY markers — green upward triangle with white border, label above marker
+            # BUY markers — split by trade outcome (win=green, loss=orange, open=grey)
             if res.buy_signals:
-                buy_dates  = pd.to_datetime(res.buy_signals)
-                buy_df     = res.df[pd.to_datetime(res.df["date"]).isin(buy_dates)]
-                fig.add_trace(go.Scatter(
-                    x=pd.to_datetime(buy_df["date"]),
-                    y=buy_df["low"] * 0.97,
-                    mode="markers+text",
-                    marker=dict(
-                        symbol="triangle-up",
-                        size=16,
-                        color="#00e676",
-                        line=dict(color="white", width=1.5),
-                    ),
-                    text=["B"] * len(buy_df),
-                    textposition="bottom center",
-                    textfont=dict(color="#00e676", size=9),
-                    name="BUY",
-                ), row=1, col=1)
+                # Map entry_date → pnl_pct for closed trades
+                trade_result = {t.entry_date: t.pnl_pct for t in res.trades if t.closed}
+                open_entries = {t.entry_date for t in res.trades if not t.closed}
 
-            # SELL markers — red downward triangle with white border, label below marker
+                buy_dates = pd.to_datetime(res.buy_signals)
+                buy_df    = res.df[pd.to_datetime(res.df["date"]).isin(buy_dates)].copy()
+                buy_df["_pnl"] = buy_df["date"].map(lambda d: trade_result.get(d, None))
+                buy_df["_open"] = buy_df["date"].isin(open_entries)
+
+                for label, mask, color in [
+                    ("BUY win",  (buy_df["_pnl"].notna()) & (buy_df["_pnl"] > 0),  "#00e676"),
+                    ("BUY loss", (buy_df["_pnl"].notna()) & (buy_df["_pnl"] <= 0), "#FF6D00"),
+                    ("BUY open", buy_df["_open"],                                    "#90CAF9"),
+                ]:
+                    sub = buy_df[mask]
+                    if sub.empty:
+                        continue
+                    fig.add_trace(go.Scatter(
+                        x=pd.to_datetime(sub["date"]),
+                        y=sub["low"] * 0.97,
+                        mode="markers+text",
+                        marker=dict(symbol="triangle-up", size=16, color=color,
+                                    line=dict(color="white", width=1.5)),
+                        text=["B"] * len(sub),
+                        textposition="bottom center",
+                        textfont=dict(color=color, size=9),
+                        name=label,
+                    ), row=1, col=1)
+
+            # SELL markers — split by trade outcome
             if res.sell_signals:
+                trade_result_by_exit = {t.exit_date: t.pnl_pct for t in res.trades if t.closed}
+
                 sell_dates = pd.to_datetime(res.sell_signals)
-                sell_df    = res.df[pd.to_datetime(res.df["date"]).isin(sell_dates)]
-                fig.add_trace(go.Scatter(
-                    x=pd.to_datetime(sell_df["date"]),
-                    y=sell_df["high"] * 1.03,
-                    mode="markers+text",
-                    marker=dict(
-                        symbol="triangle-down",
-                        size=16,
-                        color="#ff1744",
-                        line=dict(color="white", width=1.5),
-                    ),
-                    text=["S"] * len(sell_df),
-                    textposition="top center",
-                    textfont=dict(color="#ff1744", size=9),
-                    name="SELL",
-                ), row=1, col=1)
+                sell_df    = res.df[pd.to_datetime(res.df["date"]).isin(sell_dates)].copy()
+                sell_df["_pnl"] = sell_df["date"].map(lambda d: trade_result_by_exit.get(d, None))
+
+                for label, mask, color in [
+                    ("SELL win",  (sell_df["_pnl"].notna()) & (sell_df["_pnl"] > 0),  "#00e676"),
+                    ("SELL loss", (sell_df["_pnl"].notna()) & (sell_df["_pnl"] <= 0), "#FF6D00"),
+                ]:
+                    sub = sell_df[mask]
+                    if sub.empty:
+                        continue
+                    fig.add_trace(go.Scatter(
+                        x=pd.to_datetime(sub["date"]),
+                        y=sub["high"] * 1.03,
+                        mode="markers+text",
+                        marker=dict(symbol="triangle-down", size=16, color=color,
+                                    line=dict(color="white", width=1.5)),
+                        text=["S"] * len(sub),
+                        textposition="top center",
+                        textfont=dict(color=color, size=9),
+                        name=label,
+                    ), row=1, col=1)
 
             # Volume
             vol_colors = ["#26a69a" if c >= o else "#ef5350"
