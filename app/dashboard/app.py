@@ -140,7 +140,7 @@ def get_signals_df(days: int = 30) -> pd.DataFrame:
 
 
 # --- Navigation ---
-PAGES = ["🏠 Home", "📋 Tickers", "📊 Charts", "🔬 Backtest", "⚙️ Strategies", "🔔 Signals", "📄 Reports", "📜 Audit Log"]
+PAGES = ["🏠 Home", "📋 Tickers", "📊 Charts", "🔬 Backtest", "⚙️ Strategies", "🔔 Signals", "📄 Reports", "📜 Audit Log", "🔎 Data Explorer"]
 page = st.sidebar.radio("Navigation", PAGES)
 
 # ================================================================
@@ -1425,3 +1425,70 @@ elif page == "📜 Audit Log":
         file_name=f"audit_log_{selected_sym.replace('— All —','all')}_{date.today()}.csv",
         mime="text/csv",
     )
+
+# ================================================================
+# PAGE: DATA EXPLORER
+# ================================================================
+elif page == "🔎 Data Explorer":
+    st.title("🔎 Data Explorer")
+    st.caption("Consulta precio e indicadores de cualquier ticker en un rango de fechas.")
+
+    tickers_df = get_tickers_df()
+    if tickers_df.empty:
+        st.warning("No hay tickers configurados."); st.stop()
+
+    c1, c2, c3 = st.columns([2, 1, 1])
+    exp_symbol  = c1.selectbox("Ticker", tickers_df["symbol"].tolist(), key="exp_sym")
+    exp_from    = c2.date_input("Fecha inicio", value=date(2022, 7, 1), key="exp_from")
+    exp_to      = c3.date_input("Fecha fin",    value=date.today(),     key="exp_to")
+
+    if st.button("🔍 Cargar datos", use_container_width=True):
+        ticker_row = tickers_df[tickers_df["symbol"] == exp_symbol].iloc[0]
+        ticker_id  = int(ticker_row["id"])
+
+        # OHLCV
+        with get_session() as session:
+            ohlcv_rows = (session.query(OHLCV)
+                .filter(OHLCV.ticker_id == ticker_id,
+                        OHLCV.date >= exp_from, OHLCV.date <= exp_to)
+                .order_by(OHLCV.date).all())
+            ohlcv_df = pd.DataFrame([{
+                "date": r.date, "open": float(r.open or 0), "high": float(r.high or 0),
+                "low": float(r.low or 0), "close": float(r.close or 0),
+                "volume": int(r.volume) if r.volume else 0,
+            } for r in ohlcv_rows])
+
+            # Indicadores
+            ind_rows = (session.query(Indicator)
+                .filter(Indicator.ticker_id == ticker_id,
+                        Indicator.date >= exp_from, Indicator.date <= exp_to)
+                .order_by(Indicator.date).all())
+
+        if ohlcv_df.empty:
+            st.warning("No hay datos de precio para ese período.")
+            st.stop()
+
+        ind_df = pd.DataFrame([{"date": r.date, "name": r.indicator_name, "value": float(r.value)}
+                                for r in ind_rows])
+
+        if not ind_df.empty:
+            pivot = ind_df.pivot_table(index="date", columns="name", values="value", aggfunc="first")
+            pivot.columns.name = None
+            pivot = pivot.reset_index()
+            result_df = ohlcv_df.merge(pivot, on="date", how="left")
+        else:
+            result_df = ohlcv_df
+
+        # Redondear
+        num_cols = result_df.select_dtypes(include="number").columns
+        result_df[num_cols] = result_df[num_cols].round(4)
+
+        st.success(f"{len(result_df)} filas · {len(result_df.columns)} columnas")
+        st.dataframe(result_df, use_container_width=True, hide_index=True)
+
+        st.download_button(
+            "⬇️ Descargar CSV",
+            data=result_df.to_csv(index=False),
+            file_name=f"{exp_symbol}_{exp_from}_{exp_to}.csv",
+            mime="text/csv",
+        )
