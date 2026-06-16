@@ -1,4 +1,4 @@
-"""
+""" 
 Custom technical indicators beyond pandas-ta standard set.
 All functions return a dict {indicator_name: pd.Series}.
 """
@@ -271,6 +271,7 @@ def support_resistance_zones(
     For each bar i, takes the full universe of swing highs AND lows from the
     previous lookback_bars, clusters them together, then classifies each zone
     as resistance (above current price) or support (below current price).
+    Zones are ranked by number of touches (strongest first), not by proximity.
     No lookahead: only past data is used for each bar.
     """
     is_sh_col = f"is_swing_high_{swing_n}"
@@ -307,14 +308,14 @@ def support_resistance_zones(
         # Cluster the combined universe
         all_zones = _cluster_levels(all_prices, cluster_pct)
 
-        # Classify by position relative to current price
+        # Classify by position relative to current price, rank by most touches
         resist_zones = sorted(
             [z for z in all_zones if z["center"] > close],
-            key=lambda z: z["center"],
+            key=lambda z: -z["touches"],
         )
         support_zones = sorted(
             [z for z in all_zones if z["center"] < close],
-            key=lambda z: z["center"], reverse=True,
+            key=lambda z: -z["touches"],
         )
 
         for k, zone in enumerate(resist_zones[:max_zones], 1):
